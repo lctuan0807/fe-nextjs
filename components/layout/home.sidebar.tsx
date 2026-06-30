@@ -11,9 +11,11 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useSession } from "next-auth/react";
 
 export default function HomeSidebar() {
   const isLoggedIn = true;
+  const { data: session, status } = useSession();
 
   const categories = [
     { name: "Monitors", icon: <Tv size={20} />, link: "/categories/monitors" },
@@ -72,9 +74,11 @@ export default function HomeSidebar() {
             />
             <div className="flex-1 overflow-hidden">
               <p className="font-semibold tex-tsm text-white truncate">
-                username
+                {session?.user?.username}
               </p>
-              <p className="text-xs text-gray-400 truncate">email</p>
+              <p className="text-xs text-gray-400 truncate">
+                {session?.user?.email}
+              </p>
             </div>
 
             <Button
