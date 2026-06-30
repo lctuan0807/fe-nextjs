@@ -11,11 +11,12 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
 
-export default function HomeSidebar() {
+export default function HomeSidebar(props: any) {
   const isLoggedIn = true;
-  const { data: session, status } = useSession();
+
+  const { session } = props;
 
   const categories = [
     { name: "Monitors", icon: <Tv size={20} />, link: "/categories/monitors" },
@@ -82,7 +83,7 @@ export default function HomeSidebar() {
             </div>
 
             <Button
-              onClick={() => console.log("Button Log Out clicked!")}
+              onClick={() => signOut()}
               className="p-2 text-gray-400 hover:bg-gray-700 rounded-md cursor-pointer"
             >
               <LogOut size={20} />

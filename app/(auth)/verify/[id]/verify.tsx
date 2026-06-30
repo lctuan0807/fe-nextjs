@@ -19,40 +19,37 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 const formSchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .min(3, "Username must be at least 3 characters")
-    .max(100, "Username must be at most 100 characters"),
-  email: z.email("Invalid email"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  id: z.number(),
+  otp: z.string().min(6, "OTP must be at least 6 characters"),
 });
 
-const RegisterForm = () => {
+const Verify = ({ id }: { id: number }) => {
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "",
-      email: "",
-      password: "",
+      id: id,
+      otp: "",
     },
   });
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
-    const { username, email, password } = data;
     const res = await sendRequest<IBackendResponse<any>>({
       method: "POST",
-      url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/register`,
-      body: { username, email, password },
+      url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/verify`,
+      body: { id, otp: data.otp },
     });
 
     if (res?.data) {
-      router.push(`/verify/${res?.data?.user?.id}`);
+      toast.success("Verification successful", {
+        description: "Your account has been verified",
+        position: "top-right",
+      });
+      router.push("/auth/login");
     } else {
-      toast.error("Registration failed", {
-        description: res?.message || "Registration failed",
+      toast.error("Verification failed", {
+        description: res?.message || "Verification failed",
         position: "top-right",
       });
     }
@@ -64,60 +61,34 @@ const RegisterForm = () => {
         <form id="form-rhf-demo" onSubmit={form.handleSubmit(onSubmit)}>
           <FieldGroup>
             <Controller
-              name="username"
+              name="id"
               control={form.control}
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="form-rhf-demo-username">
-                    Username*
-                  </FieldLabel>
+                <Field data-invalid={fieldState.invalid} hidden>
+                  <FieldLabel htmlFor="form-rhf-demo-id">ID*</FieldLabel>
                   <Input
                     {...field}
-                    id="form-rhf-demo-username"
+                    id="form-rhf-demo-id"
                     aria-invalid={fieldState.invalid}
-                    placeholder="Enter your username"
                     autoComplete="off"
+                    value={id}
+                    disabled
                   />
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
                 </Field>
               )}
             />
             <Controller
-              name="email"
+              name="otp"
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="form-rhf-demo-email">Email*</FieldLabel>
+                  <FieldLabel htmlFor="form-rhf-demo-otp">OTP*</FieldLabel>
                   <Input
                     {...field}
-                    id="form-rhf-demo-email"
+                    id="form-rhf-demo-otp"
                     aria-invalid={fieldState.invalid}
-                    placeholder="user@example.com"
-                    autoComplete="off"
-                  />
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              )}
-            />
-            <Controller
-              name="password"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="form-rhf-demo-password">
-                    Password*
-                  </FieldLabel>
-                  <Input
-                    {...field}
-                    id="form-rhf-demo-password"
-                    aria-invalid={fieldState.invalid}
-                    placeholder="Enter your password"
-                    type="password"
-                    autoComplete="new-password"
+                    placeholder="Enter your OTP"
+                    autoComplete="one-time-code"
                   />
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
@@ -135,7 +106,7 @@ const RegisterForm = () => {
               form="form-rhf-demo"
               className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-5 rounded-md transition-colors disabled:bg-gray-500 cursor-pointer"
             >
-              Register
+              Verify
             </Button>
           </Field>
         </FieldGroup>
@@ -156,4 +127,4 @@ const RegisterForm = () => {
   );
 };
 
-export default RegisterForm;
+export default Verify;
