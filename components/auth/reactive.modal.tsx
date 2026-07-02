@@ -5,13 +5,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +21,6 @@ import {
 } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
 import {
@@ -33,8 +30,6 @@ import {
 } from "@/components/ui/input-otp";
 import { Input } from "@/components/ui/input";
 import { sendRequest } from "@/app/utils/api";
-import { on } from "events";
-import { log } from "console";
 
 const formSchema = z.object({
   email: z.string(),
@@ -222,11 +217,6 @@ const ReactiveModal = ({
         </form>
         <DialogFooter className="flex justify-between">
           <Field className="justify-between" orientation="horizontal">
-            {currentStep > 0 && (
-              <Button type="button" variant="ghost" onClick={handleBackButton}>
-                <ChevronLeft /> Back
-              </Button>
-            )}
             {!isLastStep && (
               <Button
                 type="button"
