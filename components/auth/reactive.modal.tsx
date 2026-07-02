@@ -98,12 +98,6 @@ const ReactiveModal = ({
     }
   };
 
-  const handleBackButton = () => {
-    if (currentStep > 0) {
-      setCurrentStep((prev) => prev - 1);
-    }
-  };
-
   const onSubmit = async (data: { otp: string }) => {
     const { otp } = data;
     console.log("Console Logging ~~ ~ onSubmit ~ otp:", otp);
