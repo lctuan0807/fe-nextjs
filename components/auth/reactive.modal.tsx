@@ -196,7 +196,14 @@ const ReactiveModal = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={() => {
+        onOpenChange(false);
+        setCurrentStep(0);
+        form.reset();
+      }}
+    >
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{currentForm.title}</DialogTitle>

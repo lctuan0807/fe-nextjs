@@ -40,16 +40,16 @@ const step1Schema = z.object({
 const step2Schema = step1Schema
   .extend({
     otp: z
-      .string()
+      .string("OTP is required")
       .min(1, "OTP is required")
       .min(6, "OTP must be 6 characters")
       .regex(/^[0-9]+$/, "OTP has invalid characters"),
     password: z
-      .string()
+      .string("Password is required")
       .min(1, "Password is required")
       .min(8, "Password must be at least 8 characters"),
     confirmPassword: z
-      .string()
+      .string("Confirm Password is required")
       .min(1, "Confirm Password is required")
       .min(8, "Confirm Password must be at least 8 characters"),
   })
