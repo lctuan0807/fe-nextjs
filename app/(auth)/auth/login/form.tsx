@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import ReactiveModal from "@/components/auth/reactive.modal";
+import ChangePasswordModal from "@/components/auth/change-password.modal";
 
 const formSchema = z.object({
   email: z.string().trim().email("Please enter a valid email address"),
@@ -30,6 +31,8 @@ const LoginForm = () => {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isReactiveModalOpen, setIsReactiveModalOpen] = useState(false);
+  const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] =
+    useState(false);
   const [userEmail, setUserEmail] = useState("");
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -62,6 +65,11 @@ const LoginForm = () => {
       // redirect to home
       router.push("/home");
     }
+  };
+
+  const onForgotPassword = () => {
+    console.log("Forgot password clicked");
+    setIsForgotPasswordModalOpen(true);
   };
 
   return (
@@ -145,7 +153,7 @@ const LoginForm = () => {
           </FieldGroup>
         </CardContent>
         <Field className="border-t border-gray-200"></Field>
-        <CardFooter>
+        <CardFooter className="flex flex-col">
           <Field className="text-center text-sm inline">
             Don't have an account?{" "}
             <Link
@@ -155,12 +163,25 @@ const LoginForm = () => {
               Sign up
             </Link>
           </Field>
+          <Field className="text-center text-sm inline">
+            <Button
+              onClick={onForgotPassword}
+              variant="link"
+              className="font-medium text-indigo-400 hover:text-indigo-300 cursor-pointer"
+            >
+              Forgot your password?{" "}
+            </Button>
+          </Field>
         </CardFooter>
       </Card>
       <ReactiveModal
         open={isReactiveModalOpen}
         onOpenChange={() => setIsReactiveModalOpen(false)}
         userEmail={userEmail}
+      />
+      <ChangePasswordModal
+        open={isForgotPasswordModalOpen}
+        onOpenChange={() => setIsForgotPasswordModalOpen(false)}
       />
     </>
   );
