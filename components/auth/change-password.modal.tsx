@@ -2,7 +2,7 @@
 
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import {
   FieldError,
   FieldLabel,
   FieldGroup,
+  FieldSet,
 } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
@@ -32,9 +33,12 @@ import { Input } from "@/components/ui/input";
 import { sendRequest } from "@/app/utils/api";
 import { Eye, EyeOff } from "lucide-react";
 
-const formSchema = z
-  .object({
-    email: z.string(),
+const step1Schema = z.object({
+  email: z.email("Invalid email address"),
+});
+
+const step2Schema = step1Schema
+  .extend({
     otp: z
       .string()
       .min(1, "OTP is required")
@@ -51,8 +55,13 @@ const formSchema = z
   })
   .refine((val) => val.password === val.confirmPassword, {
     message: "Passwords do not match",
+    path: ["confirmPassword"],
   });
 
+const formSchema = z.object({
+  ...step1Schema.shape,
+  ...step2Schema.shape,
+});
 type FormSchema = z.infer<typeof formSchema>;
 
 const ChangePasswordModal = ({
@@ -84,14 +93,9 @@ const ChangePasswordModal = ({
   const isLastStep = currentStep === steps.length - 1;
   const progress = ((currentStep + 1) / steps.length) * 100;
 
-  const form = useForm<FormSchema>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: "",
-      otp: "",
-      password: "",
-      confirmPassword: "",
-    },
+  const schemas = [step1Schema, step2Schema];
+  const form = useForm({
+    resolver: zodResolver(schemas[currentStep]),
     mode: "onSubmit",
   });
 
@@ -147,18 +151,19 @@ const ChangePasswordModal = ({
       case 0: {
         return (
           <FieldGroup>
+            <FieldDescription>
+              To change your password, please enter your email
+            </FieldDescription>
             <Controller
               name="email"
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldDescription>
-                    To change your password, please enter your email
-                  </FieldDescription>
                   <Input
                     {...field}
                     id="email"
                     placeholder="username@example.com"
+                    aria-invalid={fieldState.invalid}
                   />
 
                   {fieldState.invalid && (
@@ -174,120 +179,127 @@ const ChangePasswordModal = ({
       case 1: {
         return (
           <FieldGroup>
-            <Controller
-              name="password"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="register-form-password">
-                    Password*
-                  </FieldLabel>
-                  <div className="relative">
-                    <Input
-                      {...field}
-                      id="register-form-password"
-                      aria-invalid={fieldState.invalid}
-                      placeholder="Enter your password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full w-10 text-muted-foreground hover:bg-transparent"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" aria-hidden="true" />
-                      ) : (
-                        <Eye className="h-4 w-4" aria-hidden="true" />
+            <FieldSet>
+              <FieldDescription>Change Password</FieldDescription>
+              <FieldGroup>
+                <Controller
+                  name="password"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="register-form-password">
+                        Password*
+                      </FieldLabel>
+                      <div className="relative">
+                        <Input
+                          {...field}
+                          id="register-form-password"
+                          aria-invalid={fieldState.invalid}
+                          placeholder="Enter your password"
+                          type={showPassword ? "text" : "password"}
+                          autoComplete="new-password"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full w-10 text-muted-foreground hover:bg-transparent"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" aria-hidden="true" />
+                          ) : (
+                            <Eye className="h-4 w-4" aria-hidden="true" />
+                          )}
+                          <span className="sr-only">
+                            {showPassword ? "Hide password" : "Show password"}
+                          </span>
+                        </Button>
+                      </div>
+
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
                       )}
-                      <span className="sr-only">
-                        {showPassword ? "Hide password" : "Show password"}
-                      </span>
-                    </Button>
-                  </div>
-
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
+                    </Field>
                   )}
-                </Field>
-              )}
-            />
+                />
 
-            <Controller
-              name="confirmPassword"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="register-form-confirmPassword">
-                    Confirm Password*
-                  </FieldLabel>
-                  <div className="relative">
-                    <Input
-                      {...field}
-                      id="register-form-confirmPassword"
-                      aria-invalid={fieldState.invalid}
-                      placeholder="Confirm your password"
-                      type={showConfirmPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full w-10 text-muted-foreground hover:bg-transparent"
-                      onClick={() => setShowConfirmPassword((prev) => !prev)}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4" aria-hidden="true" />
-                      ) : (
-                        <Eye className="h-4 w-4" aria-hidden="true" />
+                <Controller
+                  name="confirmPassword"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="register-form-confirmPassword">
+                        Confirm Password*
+                      </FieldLabel>
+                      <div className="relative">
+                        <Input
+                          {...field}
+                          id="register-form-confirmPassword"
+                          aria-invalid={fieldState.invalid}
+                          placeholder="Confirm your password"
+                          type={showConfirmPassword ? "text" : "password"}
+                          autoComplete="new-password"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full w-10 text-muted-foreground hover:bg-transparent"
+                          onClick={() =>
+                            setShowConfirmPassword((prev) => !prev)
+                          }
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-4 w-4" aria-hidden="true" />
+                          ) : (
+                            <Eye className="h-4 w-4" aria-hidden="true" />
+                          )}
+                          <span className="sr-only">
+                            {showConfirmPassword
+                              ? "Hide password"
+                              : "Show password"}
+                          </span>
+                        </Button>
+                      </div>
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
                       )}
-                      <span className="sr-only">
-                        {showConfirmPassword
-                          ? "Hide password"
-                          : "Show password"}
-                      </span>
-                    </Button>
-                  </div>
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
+                    </Field>
                   )}
-                </Field>
-              )}
-            />
+                />
 
-            <Controller
-              name="otp"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="otp">Enter the OTP code</FieldLabel>
-                  <InputOTP
-                    id="otp"
-                    maxLength={6}
-                    pattern="^[a-zA-Z0-9]+$"
-                    value={field.value}
-                    onChange={field.onChange}
-                    aria-invalid={fieldState.invalid}
-                    onBlur={field.onBlur}
-                    disabled={false}
-                  >
-                    <InputOTPGroup className="gap-2.5 *:data-[slot=input-otp-slot]:rounded-md *:data-[slot=input-otp-slot]:border">
-                      {Array.from({ length: 6 }, (_, i) => (
-                        <InputOTPSlot key={i} index={i} />
-                      ))}
-                    </InputOTPGroup>
-                  </InputOTP>
-                  <FieldDescription></FieldDescription>
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
+                <Controller
+                  name="otp"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="otp">Enter the OTP code</FieldLabel>
+                      <InputOTP
+                        id="otp"
+                        maxLength={6}
+                        pattern="^[a-zA-Z0-9]+$"
+                        value={field.value}
+                        onChange={field.onChange}
+                        aria-invalid={fieldState.invalid}
+                        onBlur={field.onBlur}
+                        disabled={false}
+                      >
+                        <InputOTPGroup className="gap-2.5 *:data-[slot=input-otp-slot]:rounded-md *:data-[slot=input-otp-slot]:border">
+                          {Array.from({ length: 6 }, (_, i) => (
+                            <InputOTPSlot key={i} index={i} />
+                          ))}
+                        </InputOTPGroup>
+                      </InputOTP>
+                      <FieldDescription></FieldDescription>
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
                   )}
-                </Field>
-              )}
-            />
+                />
+              </FieldGroup>
+            </FieldSet>
           </FieldGroup>
         );
       }
@@ -316,7 +328,10 @@ const ChangePasswordModal = ({
           <DialogDescription>{currentForm.description}</DialogDescription>
           <Progress value={progress} />
         </DialogHeader>
-        <form id="multi-form" onSubmit={form.handleSubmit(onSubmit)}>
+        <form
+          id="multi-form"
+          onSubmit={form.handleSubmit(onSubmit as SubmitHandler<any>)}
+        >
           {renderCurrentStepContent()}
         </form>
         <DialogFooter className="flex justify-between">
