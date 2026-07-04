@@ -30,26 +30,37 @@ import {
 } from "@/components/ui/input-otp";
 import { Input } from "@/components/ui/input";
 import { sendRequest } from "@/app/utils/api";
+import { Eye, EyeOff } from "lucide-react";
 
-const formSchema = z.object({
-  email: z.string(),
-  otp: z
-    .string()
-    .min(1, "OTP is required")
-    .min(6, "OTP must be 6 characters")
-    .regex(/^[0-9]+$/, "OTP has invalid characters"),
-});
+const formSchema = z
+  .object({
+    email: z.string(),
+    otp: z
+      .string()
+      .min(1, "OTP is required")
+      .min(6, "OTP must be 6 characters")
+      .regex(/^[0-9]+$/, "OTP has invalid characters"),
+    password: z
+      .string()
+      .min(1, "Password is required")
+      .min(8, "Password must be at least 8 characters"),
+    confirmPassword: z
+      .string()
+      .min(1, "Confirm Password is required")
+      .min(8, "Confirm Password must be at least 8 characters"),
+  })
+  .refine((val) => val.password === val.confirmPassword, {
+    message: "Passwords do not match",
+  });
 
 type FormSchema = z.infer<typeof formSchema>;
 
-const ReactiveModal = ({
+const ChangePasswordModal = ({
   open,
   onOpenChange,
-  userEmail,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  userEmail: string;
 }) => {
   const steps = [
     {
@@ -60,12 +71,13 @@ const ReactiveModal = ({
     {
       title: "Step 2",
       description: "",
-      fields: ["otp"],
+      fields: ["otp", "password", "confirmPassword"],
     },
   ];
 
   const [currentStep, setCurrentStep] = useState(0);
-  const [userId, setUserId] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const currentForm = steps[currentStep];
 
@@ -75,22 +87,29 @@ const ReactiveModal = ({
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: userEmail,
+      email: "",
       otp: "",
+      password: "",
+      confirmPassword: "",
     },
     mode: "onSubmit",
   });
 
   const handleResendButton = async () => {
+    const isStepValid = await form.trigger(["email"]);
+
+    if (!isStepValid) {
+      return;
+    }
+
+    const email = form.getValues("email");
     const res = await sendRequest<IBackendResponse<{ id: number }>>({
       method: "POST",
-      url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/resend-otp`,
-      body: { email: userEmail },
+      url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/forgot-password`,
+      body: { email },
     });
-
     if (res?.data) {
       setCurrentStep((prev) => prev + 1);
-      setUserId(res.data.id);
     } else {
       toast.error("Failed to resend OTP", {
         description: res?.message || "An error occurred",
@@ -98,24 +117,25 @@ const ReactiveModal = ({
     }
   };
 
-  const onSubmit = async (data: { otp: string }) => {
-    const { otp } = data;
-    console.log("Console Logging ~~ ~ onSubmit ~ otp:", otp);
+  const onSubmit = async (data: FormSchema) => {
+    const { otp, email, password, confirmPassword } = data;
+    console.log("Console Logging ~~ ~ onSubmit ~ data:", data);
 
     const res = await sendRequest<IBackendResponse<ILogin>>({
       method: "POST",
-      url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/verify`,
-      body: { id: userId, otp },
+      url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/change-password`,
+      body: { otp, email, password, confirmPassword },
     });
+    console.log("Console Logging ~~ ~ onSubmit ~ res:", res);
 
     if (res?.data) {
-      toast.success("Verification successful", {
-        description: "Your account has been verified, please login to continue",
+      toast.success("Password changed successfully", {
+        description: "Your password has been changed, please login to continue",
         position: "top-right",
       });
       onOpenChange(false);
     } else {
-      toast.error("Failed to verify OTP", {
+      toast.error("Failed to change password", {
         description: res?.message || "An error occurred",
         position: "top-right",
       });
@@ -133,14 +153,12 @@ const ReactiveModal = ({
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldDescription>
-                    Your account is not verified. Please check your email for
-                    verification code.
+                    To change your password, please enter your email
                   </FieldDescription>
                   <Input
                     {...field}
                     id="email"
-                    disabled
-                    placeholder={userEmail}
+                    placeholder="username@example.com"
                   />
 
                   {fieldState.invalid && (
@@ -156,6 +174,91 @@ const ReactiveModal = ({
       case 1: {
         return (
           <FieldGroup>
+            <Controller
+              name="password"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="register-form-password">
+                    Password*
+                  </FieldLabel>
+                  <div className="relative">
+                    <Input
+                      {...field}
+                      id="register-form-password"
+                      aria-invalid={fieldState.invalid}
+                      placeholder="Enter your password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full w-10 text-muted-foreground hover:bg-transparent"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <Eye className="h-4 w-4" aria-hidden="true" />
+                      )}
+                      <span className="sr-only">
+                        {showPassword ? "Hide password" : "Show password"}
+                      </span>
+                    </Button>
+                  </div>
+
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="confirmPassword"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="register-form-confirmPassword">
+                    Confirm Password*
+                  </FieldLabel>
+                  <div className="relative">
+                    <Input
+                      {...field}
+                      id="register-form-confirmPassword"
+                      aria-invalid={fieldState.invalid}
+                      placeholder="Confirm your password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full w-10 text-muted-foreground hover:bg-transparent"
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <Eye className="h-4 w-4" aria-hidden="true" />
+                      )}
+                      <span className="sr-only">
+                        {showConfirmPassword
+                          ? "Hide password"
+                          : "Show password"}
+                      </span>
+                    </Button>
+                  </div>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+
             <Controller
               name="otp"
               control={form.control}
@@ -196,7 +299,14 @@ const ReactiveModal = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={() => {
+        onOpenChange(false);
+        setCurrentStep(0);
+        form.reset();
+      }}
+    >
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{currentForm.title}</DialogTitle>
@@ -238,4 +348,4 @@ const ReactiveModal = ({
   );
 };
 
-export default ReactiveModal;
+export default ChangePasswordModal;
